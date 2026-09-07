@@ -94,7 +94,7 @@ function Invoke-ExecSharePointTemplate {
 
                 if ($Template) {
                     $TemplateName = ($Template.JSON | ConvertFrom-Json).templateName
-                    $null = Remove-AzDataTableEntity @Table -Entity $Template -Force
+                    $null = Remove-CIPPAzDataTableEntity @Table -Entity $Template -Force
                     $Body = @{
                         'Results' = "Successfully deleted template '$TemplateName'"
                     }
@@ -141,6 +141,12 @@ function Invoke-ExecSharePointTemplate {
                 $TenantFilter = $Request.Body.tenantFilter
                 if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
                     throw 'A tenant is required to deploy this template.'
+                }
+
+                # AnyTenant: deployment provisions sites in this tenant; enforce scope
+                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $TenantFilter)) {
+                    throw 'Access to this tenant is not allowed'
                 }
 
                 # Pre-create a status row so the frontend can poll live progress from queue time.
